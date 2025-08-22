@@ -1,0 +1,9 @@
+__pycache__/
+*.pyc
+.venv/
+.env
+/model/*.h5
+/model/saved_model/
+*.log
+.DS_Store
+.vscode/

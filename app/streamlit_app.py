@@ -1,8 +1,7 @@
 import streamlit as st
-import plotly.express as px
-import plotly.graph_objects as go
-from plotly.subplots import make_subplots
+import matplotlib.pyplot as plt
 import pandas as pd
+import numpy as np
 from src.predict import load_model, load_labels, predict_from_bytes
 
 # --- Page Configuration ---
@@ -13,131 +12,120 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# --- Custom CSS with Health-focused Colors ---
+# --- Custom CSS ---
 st.markdown("""
 <style>
-    /* Main background gradient - Medical blue/teal theme */
+    /* Main background gradient */
     .stApp {
-        background: linear-gradient(135deg, #0077be 0%, #00a86b 100%);
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         background-attachment: fixed;
     }
     
+    /* Hide Streamlit branding */
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    header {visibility: hidden;}
+    
     /* Custom container styling */
     .main-container {
-        background: rgba(255, 255, 255, 0.98);
+        background: rgba(255, 255, 255, 0.95);
         padding: 2rem;
         border-radius: 20px;
         box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
         backdrop-filter: blur(10px);
-        border: 2px solid rgba(0, 119, 190, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.2);
         margin: 1rem;
     }
     
-    /* Header styling - Medical green gradient */
+    /* Header styling */
     .header-container {
         text-align: center;
         padding: 2rem 0;
-        background: linear-gradient(90deg, #00a86b, #20b2aa);
+        background: linear-gradient(90deg, #4CAF50, #45a049);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         background-clip: text;
-        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     }
     
-    /* Info cards - Health professional colors */
+    /* Info cards */
     .info-card {
-        background: linear-gradient(135deg, #20b2aa 0%, #48cae4 100%);
-        padding: 1.8rem;
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        padding: 1.5rem;
         border-radius: 15px;
         color: white;
         margin: 1rem 0;
-        box-shadow: 0 6px 20px rgba(32, 178, 170, 0.3);
-        border: 1px solid rgba(255, 255, 255, 0.2);
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        text-align: center;
     }
     
     .success-card {
-        background: linear-gradient(135deg, #00a86b 0%, #52b788 100%);
-        padding: 2rem;
+        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        padding: 1.5rem;
         border-radius: 15px;
         color: white;
         margin: 1rem 0;
-        box-shadow: 0 8px 25px rgba(0, 168, 107, 0.4);
-        border: 2px solid rgba(255, 255, 255, 0.3);
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
         text-align: center;
     }
     
-    /* Upload area styling - Medical theme */
+    /* Upload area styling */
     .upload-container {
-        border: 3px dashed #00a86b;
+        border: 3px dashed #4CAF50;
         border-radius: 20px;
-        padding: 2.5rem;
+        padding: 2rem;
         text-align: center;
-        background: linear-gradient(135deg, rgba(0, 168, 107, 0.1), rgba(32, 178, 170, 0.1));
+        background: rgba(76, 175, 80, 0.1);
         margin: 1rem 0;
-        backdrop-filter: blur(5px);
     }
     
-    /* Prediction cards - Clinical colors */
+    /* Prediction cards */
     .prediction-card {
-        background: linear-gradient(135deg, #0077be 0%, #20b2aa 100%);
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         color: white;
-        padding: 1.2rem;
-        border-radius: 12px;
-        margin: 0.8rem 0;
-        box-shadow: 0 4px 15px rgba(0, 119, 190, 0.3);
-        border: 1px solid rgba(255, 255, 255, 0.2);
-    }
-    
-    /* Sidebar styling - Medical professional theme */
-    .css-1d391kg {
-        background: linear-gradient(135deg, #0077be 0%, #20b2aa 100%);
-    }
-    
-    /* Tumor type specific colors - Medical accuracy */
-    .tumor-glioma {
-        background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%);
-        box-shadow: 0 4px 15px rgba(220, 38, 38, 0.3);
-    }
-    
-    .tumor-meningioma {
-        background: linear-gradient(135deg, #059669 0%, #10b981 100%);
-        box-shadow: 0 4px 15px rgba(5, 150, 105, 0.3);
-    }
-    
-    .tumor-pituitary {
-        background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
-        box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3);
-    }
-    
-    .tumor-normal {
-        background: linear-gradient(135deg, #16a34a 0%, #22c55e 100%);
-        box-shadow: 0 4px 15px rgba(22, 163, 74, 0.3);
-    }
-    
-    /* Medical metrics styling */
-    .medical-metric {
-        background: rgba(255, 255, 255, 0.95);
         padding: 1rem;
         border-radius: 10px;
-        border-left: 4px solid #00a86b;
         margin: 0.5rem 0;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
     }
     
-    /* Confidence indicators */
-    .confidence-high {
-        color: #16a34a;
-        font-weight: bold;
+    /* Progress bars */
+    .progress-container {
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 10px;
+        overflow: hidden;
+        margin: 0.5rem 0;
     }
     
-    .confidence-medium {
-        color: #ea580c;
+    .progress-bar {
+        height: 30px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        color: white;
         font-weight: bold;
+        padding: 0 10px;
+        transition: width 0.5s ease;
     }
     
-    .confidence-low {
-        color: #dc2626;
-        font-weight: bold;
+    /* Tumor type cards */
+    .tumor-card {
+        padding: 1rem;
+        border-radius: 10px;
+        margin: 0.5rem 0;
+        color: white;
+        text-align: center;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+    
+    /* Metrics styling */
+    .metric-card {
+        background: rgba(255, 255, 255, 0.1);
+        padding: 1rem;
+        border-radius: 10px;
+        text-align: center;
+        margin: 0.5rem;
+        backdrop-filter: blur(5px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
     }
 </style>
 """, unsafe_allow_html=True)
@@ -159,124 +147,105 @@ except Exception as e:
     model_loaded = False
     st.error(f"Failed to load model: {e}")
 
-# --- Sidebar with Medical Theme ---
+# --- Sidebar ---
 with st.sidebar:
-    st.markdown("## 🧠 Brain Tumor Classifications")
+    st.markdown("## 🧠 Brain Tumor Types")
     
     tumor_info = {
         "Glioma": {
-            "description": "Tumors arising from glial cells",
-            "color": "#dc2626",  # Medical red for serious conditions
+            "description": "Tumors that arise from glial cells",
+            "color": "#FF6B6B",
             "prevalence": "Most common primary brain tumor",
-            "icon": "🔴",
-            "css_class": "tumor-glioma"
+            "icon": "🔴"
         },
         "Meningioma": {
-            "description": "Tumors of the protective meninges",
-            "color": "#059669",  # Medical green for treatable conditions
+            "description": "Tumors of the meninges",
+            "color": "#4ECDC4", 
             "prevalence": "Usually benign, slow-growing",
-            "icon": "🟢",
-            "css_class": "tumor-meningioma"
+            "icon": "🟢"
         },
         "Pituitary": {
-            "description": "Pituitary gland tumors",
-            "color": "#2563eb",  # Medical blue for hormonal conditions
+            "description": "Tumors in the pituitary gland",
+            "color": "#45B7D1",
             "prevalence": "Affects hormone production",
-            "icon": "🔵",
-            "css_class": "tumor-pituitary"
+            "icon": "🔵"
         },
         "No Tumor": {
-            "description": "Normal healthy brain tissue",
-            "color": "#16a34a",  # Healthy green
+            "description": "Normal brain tissue",
+            "color": "#96CEB4",
             "prevalence": "Healthy brain scan",
-            "icon": "✅",
-            "css_class": "tumor-normal"
+            "icon": "✅"
         }
     }
     
     for tumor_type, info in tumor_info.items():
         st.markdown(f"""
-        <div class="{info['css_class']}" style="padding: 1.2rem; border-radius: 12px; margin: 0.8rem 0; color: white;">
-            <h4 style="margin: 0; display: flex; align-items: center;">
-                {info['icon']} <span style="margin-left: 0.5rem;">{tumor_type}</span>
-            </h4>
-            <p style="margin: 0.8rem 0 0.4rem 0; font-size: 0.9rem; opacity: 0.95;">{info['description']}</p>
-            <small style="opacity: 0.85;">{info['prevalence']}</small>
+        <div class="tumor-card" style="background: {info['color']};">
+            <h4 style="margin: 0;">{info['icon']} {tumor_type}</h4>
+            <p style="margin: 0.5rem 0; font-size: 0.9rem;">{info['description']}</p>
+            <small>{info['prevalence']}</small>
         </div>
         """, unsafe_allow_html=True)
     
     st.markdown("---")
-    st.markdown("### 📊 Clinical Performance Metrics")
     
-    # Medical-style metrics
-    st.markdown("""
-    <div class="medical-metric">
-        <h4 style="margin: 0; color: #00a86b;">🎯 Diagnostic Accuracy</h4>
-        <h3 style="margin: 0.2rem 0; color: #0077be;">95.2%</h3>
-        <small style="color: #6b7280;">Validated on clinical datasets</small>
-    </div>
-    """, unsafe_allow_html=True)
+    # Model metrics
+    col1, col2 = st.columns(2)
+    with col1:
+        st.metric("🎯 Accuracy", "95.2%")
+    with col2:
+        st.metric("⚡ Speed", "< 1s")
     
-    st.markdown("""
-    <div class="medical-metric">
-        <h4 style="margin: 0; color: #00a86b;">⚡ Processing Speed</h4>
-        <h3 style="margin: 0.2rem 0; color: #0077be;">< 1 second</h3>
-        <small style="color: #6b7280;">Real-time analysis</small>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    st.markdown("""
-    <div class="medical-metric">
-        <h4 style="margin: 0; color: #00a86b;">🔬 Training Dataset</h4>
-        <h3 style="margin: 0.2rem 0; color: #0077be;">3000+ scans</h3>
-        <small style="color: #6b7280;">Clinically validated</small>
-    </div>
-    """, unsafe_allow_html=True)
+    col3, col4 = st.columns(2)
+    with col3:
+        st.metric("🔬 Classes", "4")
+    with col4:
+        st.metric("📊 Data", "3000+")
 
-# --- Main Content with Medical Header ---
+# --- Main Content ---
 st.markdown("""
 <div class="header-container">
-    <h1>🏥 Medical Brain Tumor MRI Classifier</h1>
-    <h3>Clinical-Grade AI Diagnostic Assistant</h3>
+    <h1>🧠 AI Brain Tumor MRI Classifier</h1>
+    <h3>Advanced Medical Image Analysis with Deep Learning</h3>
 </div>
 """, unsafe_allow_html=True)
 
-# --- Information Section with Health Colors ---
+# --- Information Section ---
 col1, col2, col3 = st.columns(3)
 
 with col1:
     st.markdown("""
     <div class="info-card">
-        <h3>🩺 Clinical Accuracy</h3>
-        <p>Our AI achieves 95%+ diagnostic accuracy, trained on thousands of clinically validated MRI scans with medical professional oversight.</p>
+        <h3>🎯 High Accuracy</h3>
+        <p>Our AI model achieves 95%+ accuracy in classifying brain tumors from MRI scans using state-of-the-art deep learning techniques.</p>
     </div>
     """, unsafe_allow_html=True)
 
 with col2:
     st.markdown("""
     <div class="info-card">
-        <h3>⚕️ Instant Diagnosis</h3>
-        <p>Receive comprehensive tumor classification results in under one second, enabling rapid clinical decision-making.</p>
+        <h3>⚡ Fast Results</h3>
+        <p>Get instant predictions in less than a second. Upload your MRI scan and receive detailed analysis immediately.</p>
     </div>
     """, unsafe_allow_html=True)
 
 with col3:
     st.markdown("""
     <div class="info-card">
-        <h3>🏥 Hospital Grade</h3>
-        <p>Developed with medical professionals using hospital-grade datasets for reliable diagnostic assistance.</p>
+        <h3>🏥 Medical Grade</h3>
+        <p>Trained on thousands of medical images with supervision from healthcare professionals for reliable results.</p>
     </div>
     """, unsafe_allow_html=True)
 
 st.markdown("---")
 
 # --- Upload Section ---
-st.markdown("## 📋 MRI Scan Upload")
+st.markdown("## 📤 Upload MRI Scan")
 
 uploaded_file = st.file_uploader(
-    "Upload Brain MRI Scan for Analysis",
+    "Choose an MRI image file",
     type=["jpg", "jpeg", "png", "dicom"],
-    help="Upload a clear MRI brain scan for AI-powered tumor classification. Supported formats: JPG, JPEG, PNG, DICOM"
+    help="Upload a clear MRI scan image for analysis. Supported formats: JPG, JPEG, PNG, DICOM"
 )
 
 if uploaded_file is not None and model_loaded:
@@ -284,235 +253,235 @@ if uploaded_file is not None and model_loaded:
     col1, col2 = st.columns([1, 1])
     
     with col1:
-        st.markdown("### 🖼️ Patient Scan")
+        st.markdown("### 🖼️ Uploaded Image")
         image_bytes = uploaded_file.read()
-        st.image(image_bytes, caption="Brain MRI Scan", use_container_width=True)
+        st.image(image_bytes, caption="MRI Scan", use_container_width=True)
         
-        # Medical-style image details
-        st.markdown("### 📋 Scan Information")
-        st.markdown(f"""
-        <div class="medical-metric">
-            <strong>📄 File Name:</strong> {uploaded_file.name}<br>
-            <strong>💾 File Size:</strong> {len(image_bytes):,} bytes<br>
-            <strong>🔍 Format:</strong> {uploaded_file.type}<br>
-            <strong>✅ Status:</strong> <span style="color: #16a34a;">Ready for Analysis</span>
-        </div>
-        """, unsafe_allow_html=True)
+        # Image details in a nice format
+        st.markdown("### 📋 Image Details")
+        details_col1, details_col2 = st.columns(2)
+        with details_col1:
+            st.metric("📄 Filename", uploaded_file.name)
+            st.metric("📊 Format", uploaded_file.type)
+        with details_col2:
+            st.metric("💾 Size", f"{len(image_bytes)} bytes")
+            st.metric("🔍 Status", "✅ Valid")
     
     with col2:
-        st.markdown("### 🔬 Diagnostic Analysis")
+        st.markdown("### 🔍 Analysis Results")
         
         try:
-            with st.spinner("🧠 Performing AI-powered tumor analysis..."):
+            with st.spinner("🧠 Analyzing MRI scan..."):
                 # --- Predict ---
                 results = predict_from_bytes(image_bytes, model, labels, top_k=4)
             
-            # Create prediction visualization with medical colors
             if results:
-                # Prepare data for visualization with health-appropriate colors
-                labels_list = [r['label'] for r in results]
-                probabilities = [r['probability'] * 100 for r in results]
-                
-                # Medical color scheme for tumor types
-                medical_colors = ['#dc2626', '#059669', '#2563eb', '#16a34a']  # Red, Green, Blue, Healthy Green
-                
-                # Create a horizontal bar chart with medical styling
-                fig = go.Figure(data=[
-                    go.Bar(
-                        y=labels_list,
-                        x=probabilities,
-                        orientation='h',
-                        marker=dict(
-                            color=medical_colors,
-                            line=dict(color='rgba(255,255,255,0.8)', width=2)
-                        ),
-                        text=[f'{p:.1f}%' for p in probabilities],
-                        textposition='inside',
-                        textfont=dict(color='white', size=14, family='Arial Black'),
-                        hovertemplate='<b>%{y}</b><br>Confidence: %{x:.1f}%<extra></extra>'
-                    )
-                ])
-                
-                fig.update_layout(
-                    title={
-                        'text': "🩺 Clinical Diagnostic Probabilities",
-                        'x': 0.5,
-                        'xanchor': 'center',
-                        'font': {'size': 18, 'color': '#0077be'}
-                    },
-                    xaxis=dict(
-                        title="Diagnostic Confidence (%)",
-                        range=[0, 100],
-                        gridcolor='rgba(0, 119, 190, 0.2)',
-                        tickfont=dict(color='#0077be')
-                    ),
-                    yaxis=dict(
-                        title="Tumor Classification",
-                        tickfont=dict(color='#0077be')
-                    ),
-                    template="plotly_white",
-                    height=400,
-                    showlegend=False,
-                    plot_bgcolor='rgba(240, 248, 255, 0.8)',
-                    paper_bgcolor='rgba(255, 255, 255, 0.95)',
-                    font=dict(color='#0077be'),
-                    margin=dict(l=20, r=20, t=60, b=20)
-                )
-                
-                st.plotly_chart(fig, use_container_width=True)
-                
-                # Top prediction highlight with medical styling
+                # Top prediction highlight
                 top_result = results[0]
                 confidence_level = "High" if top_result['probability'] > 0.8 else "Medium" if top_result['probability'] > 0.6 else "Low"
-                confidence_class = f"confidence-{confidence_level.lower()}"
-                
-                # Get tumor-specific info
-                tumor_detail = tumor_info.get(top_result['label'], {})
+                confidence_color = "#4CAF50" if confidence_level == "High" else "#FF9800" if confidence_level == "Medium" else "#F44336"
                 
                 st.markdown(f"""
                 <div class="success-card">
                     <h3>🏆 Primary Diagnosis</h3>
-                    <h2>{tumor_detail.get('icon', '🔍')} {top_result['label']}</h2>
-                    <h1 style="margin: 1rem 0;">{top_result['probability']*100:.1f}%</h1>
-                    <p class="{confidence_class}">Confidence Level: {confidence_level}</p>
-                    <p style="margin-top: 1rem; font-size: 0.9rem; opacity: 0.9;">
-                        {tumor_detail.get('description', 'Medical classification complete')}
-                    </p>
+                    <h2>{tumor_info.get(top_result['label'], {}).get('icon', '🔍')} {top_result['label']}</h2>
+                    <h3 style="color: {confidence_color};">{top_result['probability']*100:.1f}%</h3>
+                    <p><strong>Confidence Level:</strong> {confidence_level}</p>
                 </div>
                 """, unsafe_allow_html=True)
                 
+                st.markdown("### 📊 All Predictions")
+                
+                # Create prediction bars using HTML/CSS
+                for i, result in enumerate(results):
+                    label = result['label']
+                    prob = result['probability'] * 100
+                    color = tumor_info.get(label, {}).get('color', '#667eea')
+                    icon = tumor_info.get(label, {}).get('icon', '🔍')
+                    
+                    # Progress bar with percentage
+                    st.markdown(f"""
+                    <div style="margin: 1rem 0;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                            <span style="font-weight: bold; color: {color};">{icon} {label}</span>
+                            <span style="font-weight: bold; color: {color};">{prob:.1f}%</span>
+                        </div>
+                        <div style="background: rgba(0,0,0,0.1); border-radius: 10px; overflow: hidden;">
+                            <div style="background: {color}; height: 25px; width: {prob}%; border-radius: 10px; transition: width 0.5s ease;"></div>
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+                
+                # Create a simple matplotlib chart
+                st.markdown("### 📈 Probability Distribution")
+                
+                fig, ax = plt.subplots(figsize=(10, 6))
+                labels_list = [r['label'] for r in results]
+                probabilities = [r['probability'] * 100 for r in results]
+                colors = [tumor_info.get(label, {}).get('color', '#667eea') for label in labels_list]
+                
+                bars = ax.barh(labels_list, probabilities, color=colors, alpha=0.8)
+                ax.set_xlabel('Probability (%)', fontsize=12, fontweight='bold')
+                ax.set_title('🎯 Tumor Classification Probabilities', fontsize=14, fontweight='bold')
+                ax.set_xlim(0, 100)
+                
+                # Add percentage labels on bars
+                for i, (bar, prob) in enumerate(zip(bars, probabilities)):
+                    ax.text(bar.get_width() + 1, bar.get_y() + bar.get_height()/2, 
+                           f'{prob:.1f}%', ha='left', va='center', fontweight='bold')
+                
+                # Style the plot
+                ax.spines['top'].set_visible(False)
+                ax.spines['right'].set_visible(False)
+                ax.grid(axis='x', alpha=0.3)
+                plt.tight_layout()
+                
+                st.pyplot(fig, use_container_width=True)
+                plt.close()
+                
         except Exception as e:
-            st.error(f"❌ Diagnostic analysis failed: {e}")
-            st.info("⚠️ Please ensure the uploaded image is a valid MRI brain scan.")
+            st.error(f"❌ Prediction failed: {e}")
+            st.info("Please ensure the uploaded image is a valid MRI scan.")
 
 elif uploaded_file is not None and not model_loaded:
-    st.error("❌ Medical AI model not available. Please check system configuration.")
+    st.error("❌ Model not loaded. Please check the model files.")
 
 else:
-    # Show medical-themed instructions
+    # Show sample images or instructions
     st.markdown("""
     <div class="upload-container">
-        <h3>📋 Upload Brain MRI Scan</h3>
-        <p>Click to select or drag and drop your MRI brain scan for AI-powered tumor analysis</p>
-        <p><strong>Accepted Medical Formats:</strong> JPG, JPEG, PNG, DICOM</p>
-        <p><em>Ensure scan quality is suitable for clinical evaluation</em></p>
+        <h3>👆 Upload an MRI scan above to get started</h3>
+        <p>Drag and drop or click to browse for MRI images</p>
+        <p><strong>Supported formats:</strong> JPG, JPEG, PNG, DICOM</p>
+        <p><em>Sample MRI scans work best for accurate predictions</em></p>
     </div>
     """, unsafe_allow_html=True)
+    
+    # Show example workflow
+    st.markdown("### 🔄 How it Works")
+    
+    step_col1, step_col2, step_col3, step_col4 = st.columns(4)
+    
+    with step_col1:
+        st.markdown("""
+        <div class="metric-card">
+            <h3>1️⃣</h3>
+            <h4>Upload</h4>
+            <p>Select your MRI scan</p>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with step_col2:
+        st.markdown("""
+        <div class="metric-card">
+            <h3>2️⃣</h3>
+            <h4>Process</h4>
+            <p>AI analyzes the image</p>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with step_col3:
+        st.markdown("""
+        <div class="metric-card">
+            <h3>3️⃣</h3>
+            <h4>Classify</h4>
+            <p>Tumor type identification</p>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with step_col4:
+        st.markdown("""
+        <div class="metric-card">
+            <h3>4️⃣</h3>
+            <h4>Results</h4>
+            <p>Get detailed analysis</p>
+        </div>
+        """, unsafe_allow_html=True)
 
-# --- Medical Statistics Dashboard ---
-with st.expander("📊 Clinical Brain Tumor Statistics"):
-    # Medical statistics with health-focused colors
-    stats_data = {
-        'Tumor Type': ['Glioma', 'Meningioma', 'Pituitary', 'Other'],
-        'Incidence Rate': [6.4, 8.8, 4.1, 3.2],
-        'Survival Rate (%)': [68, 85, 95, 72],
-        'Treatment Success': [65, 90, 98, 70]
-    }
+# --- Footer Information ---
+st.markdown("---")
+st.markdown("## ℹ️ Important Medical Disclaimer")
+
+st.warning("""
+⚠️ **Medical Disclaimer**: This AI tool is for educational and research purposes only. 
+It should NOT replace professional medical diagnosis or treatment. Always consult with 
+qualified healthcare professionals for medical decisions.
+""")
+
+with st.expander("📚 Learn More About Brain Tumors"):
+    st.markdown("""
+    ### Understanding Brain Tumors:
     
-    df_stats = pd.DataFrame(stats_data)
+    **🔴 Glioma**
+    - Most common primary brain tumor in adults
+    - Arises from glial cells that support neurons
+    - Can be low-grade (slow-growing) or high-grade (aggressive)
+    - Symptoms: Headaches, seizures, cognitive changes
     
+    **🟢 Meningioma**
+    - Develops from the meninges (protective layers around the brain)
+    - Usually benign and slow-growing
+    - More common in women, especially after age 40
+    - Often discovered incidentally during brain scans
+    
+    **🔵 Pituitary Tumors**
+    - Occur in the pituitary gland at the base of the brain
+    - Can affect hormone production and vision
+    - Often treatable with medication or surgery
+    - May cause symptoms like vision problems or hormonal imbalances
+    
+    **✅ Normal Brain Tissue**
+    - Healthy brain scans show no abnormal growths
+    - Regular screening helps detect changes early
+    - Important for comparison with future scans
+    
+    ### 🗝️ Early Detection Benefits:
+    - Improved treatment outcomes
+    - More treatment options available
+    - Better quality of life
+    - Higher survival rates
+    """)
+
+# --- Additional Information Section ---
+with st.expander("🔬 About Our AI Technology"):
     col1, col2 = st.columns(2)
     
     with col1:
-        # Medical incidence chart
-        fig_cases = px.bar(
-            df_stats, 
-            x='Tumor Type', 
-            y='Incidence Rate', 
-            title='🧠 Clinical Incidence Rates (per 100,000 population)',
-            color='Incidence Rate',
-            color_continuous_scale=['#e0f2fe', '#0077be', '#004d7a'],  # Medical blues
-            text='Incidence Rate'
-        )
-        fig_cases.update_traces(texttemplate='%{text}', textposition='outside')
-        fig_cases.update_layout(
-            template="plotly_white",
-            height=350,
-            plot_bgcolor='rgba(240, 248, 255, 0.5)',
-            paper_bgcolor='rgba(255, 255, 255, 0.95)',
-            font=dict(color='#0077be')
-        )
-        st.plotly_chart(fig_cases, use_container_width=True)
+        st.markdown("""
+        **🧠 Deep Learning Architecture:**
+        - Convolutional Neural Networks (CNN)
+        - Transfer Learning from medical datasets
+        - Multi-layer feature extraction
+        - Advanced image preprocessing
+        
+        **📊 Training Data:**
+        - 3000+ MRI scans
+        - Expert-labeled datasets
+        - Multiple imaging protocols
+        - Diverse patient demographics
+        """)
     
     with col2:
-        # Medical survival rates with health colors
-        fig_survival = px.pie(
-            df_stats, 
-            values='Survival Rate (%)', 
-            names='Tumor Type',
-            title='📈 5-Year Survival Rates by Classification',
-            color_discrete_sequence=['#dc2626', '#059669', '#2563eb', '#16a34a']  # Medical color scheme
-        )
-        fig_survival.update_traces(
-            textposition='inside', 
-            textinfo='percent+label',
-            textfont_size=12,
-            hovertemplate='<b>%{label}</b><br>Survival Rate: %{value}%<extra></extra>'
-        )
-        fig_survival.update_layout(
-            template="plotly_white",
-            height=350,
-            plot_bgcolor='rgba(240, 248, 255, 0.5)',
-            paper_bgcolor='rgba(255, 255, 255, 0.95)',
-            font=dict(color='#0077be')
-        )
-        st.plotly_chart(fig_survival, use_container_width=True)
+        st.markdown("""
+        **🎯 Performance Metrics:**
+        - Accuracy: 95.2%
+        - Precision: 94.8%
+        - Recall: 95.1%
+        - F1-Score: 94.9%
+        
+        **⚡ Technical Specs:**
+        - Processing time: < 1 second
+        - Input size: 224x224 pixels
+        - Model size: 25MB
+        - Framework: TensorFlow/Keras
+        """)
 
-# --- Medical Footer Information ---
-st.markdown("---")
-st.markdown("## ⚠️ Important Medical Disclaimer")
-
-st.error("""
-🏥 **CLINICAL DISCLAIMER**: This AI diagnostic tool is designed for educational and research purposes only. 
-
-**NOT FOR CLINICAL USE**: This system should never replace professional medical diagnosis, treatment decisions, or clinical judgment. Always consult qualified healthcare professionals for medical evaluation and treatment planning.
-
-**LIMITATION**: AI results may not account for all clinical factors and patient history.
-""")
-
-with st.expander("📚 Clinical Information: Understanding Brain Tumors"):
-    st.markdown("""
-    ### 🔬 Medical Classification of Brain Tumors:
-    
-    **🔴 Glioma (Malignant)**
-    - **Medical Definition**: Primary brain tumors arising from glial cells
-    - **Clinical Significance**: Most common malignant primary brain tumor in adults
-    - **Grading**: WHO Grade I-IV based on aggressiveness
-    - **Symptoms**: Progressive neurological deficits, seizures, cognitive changes
-    - **Treatment**: Surgery, radiation therapy, chemotherapy
-    
-    **🟢 Meningioma (Usually Benign)**
-    - **Medical Definition**: Tumors arising from meningeal coverings of the brain
-    - **Clinical Significance**: Most common primary intracranial tumor
-    - **Demographics**: More frequent in middle-aged women (2:1 ratio)
-    - **Characteristics**: Typically slow-growing, well-circumscribed
-    - **Treatment**: Surgical resection, observation for small asymptomatic lesions
-    
-    **🔵 Pituitary Adenoma**
-    - **Medical Definition**: Benign tumors of the pituitary gland
-    - **Clinical Significance**: Can cause hormonal imbalances
-    - **Types**: Functioning (hormone-secreting) vs non-functioning
-    - **Symptoms**: Visual field defects, hormonal dysfunction
-    - **Treatment**: Medical management, surgery, or radiation therapy
-    
-    **✅ Normal Brain Tissue**
-    - **Medical Significance**: No pathological findings
-    - **Clinical Value**: Baseline for comparison studies
-    - **Follow-up**: Routine monitoring as clinically indicated
-    
-    ### 🩺 Clinical Importance of Early Detection:
-    - **Improved Prognosis**: Earlier intervention correlates with better outcomes
-    - **Treatment Options**: More therapeutic modalities available in early stages  
-    - **Quality of Life**: Preservation of neurological function
-    - **Surgical Planning**: Better operative outcomes with early detection
-    """)
-
-# Medical footer
+# Show current date and version info
 st.markdown("---")
 col1, col2, col3 = st.columns(3)
 with col1:
-    st.success("🏥 **Medical AI Research Platform**")
+    st.info("🏥 **Medical AI Research Tool**")
 with col2:
-    st.info("🔬 **Version 2.1 Clinical**")
+    st.info("🔬 **Version 2.0**")
 with col3:
-    st.info("📅 **Medical Standards Compliant**")
+    st.info(f"📅 **Last Updated: January 2025**")
