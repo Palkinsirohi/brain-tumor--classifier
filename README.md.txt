@@ -260,3 +260,146 @@ if __name__ == '__main__':
 6. Saves class labels for future use.
 
 Let me know if you want a visual diagram of the data flow too.
+
+
+Here’s a **line-by-line simple explanation** of your code:
+
+---
+
+### ✅ **Import Libraries**
+
+```python
+import json
+import numpy as np
+import cv2
+import tensorflow as tf
+```
+
+* `json`: Read/write JSON files (for class labels).
+* `numpy`: Handle arrays and numerical operations.
+* `cv2` (OpenCV): Image processing library.
+* `tensorflow`: Deep learning framework.
+
+---
+
+### ✅ **Load a Saved Model**
+
+```python
+def load_model(model_path):
+    return tf.keras.models.load_model(model_path)
+```
+
+* Loads a pre-trained Keras model from disk using the path you provide.
+* Returns a ready-to-use model for prediction.
+
+---
+
+### ✅ **Load Labels**
+
+```python
+def load_labels(labels_path):
+    with open(labels_path, 'r') as f:
+        return json.load(f)
+```
+
+* Reads a JSON file containing class names (labels).
+* Returns a Python list like `["cat", "dog", "bird"]`.
+
+---
+
+### ✅ **Preprocess Image from Bytes**
+
+```python
+def preprocess_image_bytes(image_bytes, image_size=150):
+    # decode bytes -> OpenCV image (BGR)
+    nparr = np.frombuffer(image_bytes, np.uint8)
+    img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+    if img is None:
+        raise ValueError('Could not decode image bytes')
+    # convert BGR -> RGB
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    img = cv2.resize(img, (image_size, image_size))
+    img = img.astype('float32') / 255.0
+    return np.expand_dims(img, axis=0)
+```
+
+Step-by-step explanation:
+
+1. `np.frombuffer`: Converts raw bytes to a NumPy array.
+2. `cv2.imdecode`: Decodes the array into an image (BGR format).
+3. Checks if image decoding failed.
+4. `cv2.cvtColor`: Converts BGR (OpenCV default) to RGB.
+5. `cv2.resize`: Resizes image to `image_size x image_size`.
+6. Normalizes pixel values to `[0,1]`.
+7. `np.expand_dims`: Adds a batch dimension (`[1, H, W, 3]`) for model input.
+
+---
+
+### ✅ **Predict from Image Bytes**
+
+```python
+def predict_from_bytes(image_bytes, model, labels, image_size=150, top_k=3):
+    x = preprocess_image_bytes(image_bytes, image_size)
+    preds = model.predict(x)[0]
+    idxs = preds.argsort()[::-1][:top_k]
+    results = [{'label': labels[i], 'probability': float(preds[i])} for i in idxs]
+    return results
+```
+
+Step-by-step:
+
+1. Preprocess the image bytes into a model-ready array.
+2. Get prediction probabilities from the model.
+3. Sort indices of predictions in descending order.
+4. Take `top_k` predictions.
+5. Return a list of dictionaries with label names and probabilities.
+
+Example output:
+
+```json
+[{"label": "cat", "probability": 0.85}, {"label": "dog", "probability": 0.10}]
+```
+
+---
+
+### ✅ **Command-line Interface for Quick Test**
+
+```python
+if __name__ == '__main__':
+    import sys
+    if len(sys.argv) < 4:
+        print('Usage: python src/predict.py model_path labels.json image.jpg')
+        sys.exit(1)
+    model = load_model(sys.argv[1])
+    labels = load_labels(sys.argv[2])
+    with open(sys.argv[3], 'rb') as f:
+        b = f.read()
+    print(predict_from_bytes(model, b, labels))
+```
+
+* Checks if the script is run directly.
+* Reads command-line arguments:
+
+  1. `model_path` → Path to the saved Keras model
+  2. `labels.json` → Path to class labels
+  3. `image.jpg` → Image to predict
+* Opens the image in binary mode (`rb`) and reads bytes.
+* Calls `predict_from_bytes` and prints predictions.
+
+---
+
+### 🌟 **In Simple Words**
+
+* This script **loads a trained CNN**, **reads an image**, preprocesses it, and **outputs the top class predictions** with probabilities.
+* You can test any image just by running:
+
+```bash
+python src/predict.py best_model.h5 labels.json test.jpg
+```
+
+---
+
+If you want, I can also **draw a simple flow diagram showing how bytes → image → model → prediction works**, which makes it much easier to understand visually.
+
+Do you want me to do that?
+
