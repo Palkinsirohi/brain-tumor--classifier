@@ -403,3 +403,502 @@ If you want, I can also **draw a simple flow diagram showing how bytes → image
 
 Do you want me to do that?
 
+
+Here’s a **line-by-line explanation** of your Streamlit brain tumor MRI classifier app in simple terms:
+
+---
+
+### ✅ **Imports**
+
+```python
+import streamlit as st
+import matplotlib.pyplot as plt
+import pandas as pd
+import numpy as np
+from src.predict import load_model, load_labels, predict_from_bytes
+```
+
+* `streamlit`: Library to create interactive web apps in Python.
+* `matplotlib.pyplot`: For plotting graphs.
+* `pandas` & `numpy`: Data handling and numerical operations.
+* `load_model`, `load_labels`, `predict_from_bytes`: Your prediction utilities from the previous script.
+
+---
+
+### ✅ **Page Configuration**
+
+```python
+st.set_page_config(
+    page_title="🧠 Brain Tumor MRI Classifier",
+    page_icon="🧠",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+```
+
+* Sets page title, icon, layout, and sidebar state for the web app.
+
+---
+
+### ✅ **Custom CSS Styling**
+
+```python
+st.markdown("""<style> ... </style>""", unsafe_allow_html=True)
+```
+
+* Styles the app:
+
+  * Background gradients
+  * Header, info cards, upload area, prediction cards
+  * Progress bars
+  * Tumor info cards
+* `unsafe_allow_html=True` allows HTML & CSS in Streamlit.
+
+---
+
+### ✅ **Load Model & Labels with Caching**
+
+```python
+MODEL_PATH = "model/best_model.h5"
+LABELS_PATH = "model/labels.json"
+
+@st.cache_resource
+def get_model():
+    model = load_model(MODEL_PATH)
+    labels = load_labels(LABELS_PATH)
+    return model, labels
+
+try:
+    model, labels = get_model()
+    model_loaded = True
+except Exception as e:
+    model_loaded = False
+    st.error(f"Failed to load model: {e}")
+```
+
+* Loads your trained model & labels once and caches them for faster reloads.
+* Shows an error if loading fails.
+
+---
+
+### ✅ **Sidebar with Tumor Info & Metrics**
+
+```python
+with st.sidebar:
+    st.markdown("## 🧠 Brain Tumor Types")
+    # Tumor info dictionary
+    # Display tumor cards using HTML/CSS
+    # Model metrics (accuracy, speed, classes, data)
+```
+
+* Shows brain tumor types with description, prevalence, color, and icon.
+* Shows model metrics (accuracy, speed, number of classes, dataset size).
+
+---
+
+### ✅ **Main Header**
+
+```python
+st.markdown("""<div class="header-container">...</div>""", unsafe_allow_html=True)
+```
+
+* App header with title & subtitle using custom CSS.
+
+---
+
+### ✅ **Info Cards**
+
+```python
+col1, col2, col3 = st.columns(3)
+with col1: st.markdown(info-card for accuracy)
+with col2: st.markdown(info-card for speed)
+with col3: st.markdown(info-card for medical grade)
+```
+
+* Three horizontally aligned cards highlighting key points: high accuracy, fast results, medical-grade reliability.
+
+---
+
+### ✅ **Upload Section**
+
+```python
+uploaded_file = st.file_uploader(
+    "Choose an MRI image file",
+    type=["jpg", "jpeg", "png", "dicom"]
+)
+```
+
+* Upload an MRI scan file for prediction.
+
+---
+
+### ✅ **If File is Uploaded**
+
+```python
+if uploaded_file is not None and model_loaded:
+    col1, col2 = st.columns([1,1])
+```
+
+* Creates two columns: one for uploaded image and details, one for predictions.
+
+#### **Left Column (Uploaded Image & Details)**
+
+```python
+image_bytes = uploaded_file.read()
+st.image(image_bytes, caption="MRI Scan")
+st.metric("Filename", uploaded_file.name)
+st.metric("Format", uploaded_file.type)
+st.metric("Size", f"{len(image_bytes)} bytes")
+st.metric("Status", "✅ Valid")
+```
+
+* Displays the uploaded MRI image and basic details.
+
+#### **Right Column (Prediction Results)**
+
+```python
+results = predict_from_bytes(image_bytes, model, labels, top_k=4)
+```
+
+* Runs prediction on uploaded image.
+* Displays primary diagnosis with confidence level (High/Medium/Low).
+* Shows all predictions with progress bars and percentage.
+* Plots a horizontal bar chart using `matplotlib` for probability distribution.
+
+---
+
+### ✅ **Error Handling**
+
+```python
+except Exception as e:
+    st.error(f"❌ Prediction failed: {e}")
+    st.info("Please ensure the uploaded image is a valid MRI scan.")
+```
+
+* Shows error if prediction fails.
+
+---
+
+### ✅ **If Model Not Loaded**
+
+```python
+elif uploaded_file is not None and not model_loaded:
+    st.error("❌ Model not loaded. Please check the model files.")
+```
+
+* Alerts user if the model isn’t available.
+
+---
+
+### ✅ **Default Instructions & Workflow**
+
+```python
+else:
+    st.markdown("Upload an MRI scan above to get started")
+    st.markdown("How it Works")
+```
+
+* Shows instructions and workflow steps: Upload → Process → Classify → Results.
+
+---
+
+### ✅ **Medical Disclaimer & Learning Resources**
+
+```python
+st.markdown("⚠️ Medical Disclaimer ...")
+with st.expander("📚 Learn More About Brain Tumors"):
+    st.markdown("Tumor types, symptoms, early detection benefits")
+```
+
+* Important legal note: AI is for educational purposes only.
+* Provides additional info about brain tumor types and early detection.
+
+---
+
+### ✅ **Additional AI & Technical Info**
+
+```python
+with st.expander("🔬 About Our AI Technology"):
+    st.columns(2) # Shows deep learning architecture, training data, performance metrics
+```
+
+* Explains the AI architecture, training dataset, performance metrics, and technical specifications.
+
+---
+
+### ✅ **Footer**
+
+```python
+st.markdown("---")
+st.columns(3) # Medical tool info, version, last update
+```
+
+* Displays app type, version, and last update date.
+
+---
+
+### 🌟 **Summary**
+
+This Streamlit app:
+
+1. **Loads a pre-trained brain tumor CNN model**.
+2. **Allows users to upload MRI images**.
+3. **Displays predictions with confidence levels**.
+4. **Shows progress bars, charts, and detailed info cards**.
+5. **Has an informative sidebar, workflow instructions, and medical disclaimer**.
+6. Fully **customized UI** with gradients, cards, and interactive charts.
+
+---
+
+If you want, I can also **draw a visual flow diagram showing the app workflow** from image upload → preprocessing → prediction → display. It will make understanding this UI much easier.
+
+Do you want me to do that?
+Here’s a **line-by-line explanation** of your Streamlit brain tumor MRI classifier app in simple terms:
+
+---
+
+### ✅ **Imports**
+
+```python
+import streamlit as st
+import matplotlib.pyplot as plt
+import pandas as pd
+import numpy as np
+from src.predict import load_model, load_labels, predict_from_bytes
+```
+
+* `streamlit`: Library to create interactive web apps in Python.
+* `matplotlib.pyplot`: For plotting graphs.
+* `pandas` & `numpy`: Data handling and numerical operations.
+* `load_model`, `load_labels`, `predict_from_bytes`: Your prediction utilities from the previous script.
+
+---
+
+### ✅ **Page Configuration**
+
+```python
+st.set_page_config(
+    page_title="🧠 Brain Tumor MRI Classifier",
+    page_icon="🧠",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+```
+
+* Sets page title, icon, layout, and sidebar state for the web app.
+
+---
+
+### ✅ **Custom CSS Styling**
+
+```python
+st.markdown("""<style> ... </style>""", unsafe_allow_html=True)
+```
+
+* Styles the app:
+
+  * Background gradients
+  * Header, info cards, upload area, prediction cards
+  * Progress bars
+  * Tumor info cards
+* `unsafe_allow_html=True` allows HTML & CSS in Streamlit.
+
+---
+
+### ✅ **Load Model & Labels with Caching**
+
+```python
+MODEL_PATH = "model/best_model.h5"
+LABELS_PATH = "model/labels.json"
+
+@st.cache_resource
+def get_model():
+    model = load_model(MODEL_PATH)
+    labels = load_labels(LABELS_PATH)
+    return model, labels
+
+try:
+    model, labels = get_model()
+    model_loaded = True
+except Exception as e:
+    model_loaded = False
+    st.error(f"Failed to load model: {e}")
+```
+
+* Loads your trained model & labels once and caches them for faster reloads.
+* Shows an error if loading fails.
+
+---
+
+### ✅ **Sidebar with Tumor Info & Metrics**
+
+```python
+with st.sidebar:
+    st.markdown("## 🧠 Brain Tumor Types")
+    # Tumor info dictionary
+    # Display tumor cards using HTML/CSS
+    # Model metrics (accuracy, speed, classes, data)
+```
+
+* Shows brain tumor types with description, prevalence, color, and icon.
+* Shows model metrics (accuracy, speed, number of classes, dataset size).
+
+---
+
+### ✅ **Main Header**
+
+```python
+st.markdown("""<div class="header-container">...</div>""", unsafe_allow_html=True)
+```
+
+* App header with title & subtitle using custom CSS.
+
+---
+
+### ✅ **Info Cards**
+
+```python
+col1, col2, col3 = st.columns(3)
+with col1: st.markdown(info-card for accuracy)
+with col2: st.markdown(info-card for speed)
+with col3: st.markdown(info-card for medical grade)
+```
+
+* Three horizontally aligned cards highlighting key points: high accuracy, fast results, medical-grade reliability.
+
+---
+
+### ✅ **Upload Section**
+
+```python
+uploaded_file = st.file_uploader(
+    "Choose an MRI image file",
+    type=["jpg", "jpeg", "png", "dicom"]
+)
+```
+
+* Upload an MRI scan file for prediction.
+
+---
+
+### ✅ **If File is Uploaded**
+
+```python
+if uploaded_file is not None and model_loaded:
+    col1, col2 = st.columns([1,1])
+```
+
+* Creates two columns: one for uploaded image and details, one for predictions.
+
+#### **Left Column (Uploaded Image & Details)**
+
+```python
+image_bytes = uploaded_file.read()
+st.image(image_bytes, caption="MRI Scan")
+st.metric("Filename", uploaded_file.name)
+st.metric("Format", uploaded_file.type)
+st.metric("Size", f"{len(image_bytes)} bytes")
+st.metric("Status", "✅ Valid")
+```
+
+* Displays the uploaded MRI image and basic details.
+
+#### **Right Column (Prediction Results)**
+
+```python
+results = predict_from_bytes(image_bytes, model, labels, top_k=4)
+```
+
+* Runs prediction on uploaded image.
+* Displays primary diagnosis with confidence level (High/Medium/Low).
+* Shows all predictions with progress bars and percentage.
+* Plots a horizontal bar chart using `matplotlib` for probability distribution.
+
+---
+
+### ✅ **Error Handling**
+
+```python
+except Exception as e:
+    st.error(f"❌ Prediction failed: {e}")
+    st.info("Please ensure the uploaded image is a valid MRI scan.")
+```
+
+* Shows error if prediction fails.
+
+---
+
+### ✅ **If Model Not Loaded**
+
+```python
+elif uploaded_file is not None and not model_loaded:
+    st.error("❌ Model not loaded. Please check the model files.")
+```
+
+* Alerts user if the model isn’t available.
+
+---
+
+### ✅ **Default Instructions & Workflow**
+
+```python
+else:
+    st.markdown("Upload an MRI scan above to get started")
+    st.markdown("How it Works")
+```
+
+* Shows instructions and workflow steps: Upload → Process → Classify → Results.
+
+---
+
+### ✅ **Medical Disclaimer & Learning Resources**
+
+```python
+st.markdown("⚠️ Medical Disclaimer ...")
+with st.expander("📚 Learn More About Brain Tumors"):
+    st.markdown("Tumor types, symptoms, early detection benefits")
+```
+
+* Important legal note: AI is for educational purposes only.
+* Provides additional info about brain tumor types and early detection.
+
+---
+
+### ✅ **Additional AI & Technical Info**
+
+```python
+with st.expander("🔬 About Our AI Technology"):
+    st.columns(2) # Shows deep learning architecture, training data, performance metrics
+```
+
+* Explains the AI architecture, training dataset, performance metrics, and technical specifications.
+
+---
+
+### ✅ **Footer**
+
+```python
+st.markdown("---")
+st.columns(3) # Medical tool info, version, last update
+```
+
+* Displays app type, version, and last update date.
+
+---
+
+### 🌟 **Summary**
+
+This Streamlit app:
+
+1. **Loads a pre-trained brain tumor CNN model**.
+2. **Allows users to upload MRI images**.
+3. **Displays predictions with confidence levels**.
+4. **Shows progress bars, charts, and detailed info cards**.
+5. **Has an informative sidebar, workflow instructions, and medical disclaimer**.
+6. Fully **customized UI** with gradients, cards, and interactive charts.
+
+---
+
+If you want, I can also **draw a visual flow diagram showing the app workflow** from image upload → preprocessing → prediction → display. It will make understanding this UI much easier.
+
+Do you want me to do that?
